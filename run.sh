@@ -138,7 +138,7 @@ start() {
     if [[ $? == 0 ]]; then
         docker start $DOCKER_NAME
     else
-        docker run ${DPORTS[@]} -v /dev/shm:/shm -v "$DATADIR":"$MOUNTDIR" -d --name $DOCKER_NAME -t eos
+        docker run ${DPORTS[@]} -v /dev/shm:/shm -v "$DATADIR":"$MOUNTDIR" -d --name $DOCKER_NAME -t eos start_eosd.sh
     fi
 }
 
