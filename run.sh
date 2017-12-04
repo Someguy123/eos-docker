@@ -8,6 +8,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 DOCKER_DIR="$DIR/dkr"
 # FULL_DOCKER_DIR="$DIR/dkr_fullnode"
 DATADIR="$DIR/data"
+MOUNTDIR="/opt/eos/bin/data-dir"
 DOCKER_NAME="seed"
 
 BOLD="$(tput bold)"
@@ -21,7 +22,7 @@ WHITE="$(tput setaf 7)"
 RESET="$(tput sgr0)"
 
 # default. override in .env
-PORTS="2001"
+PORTS="8888,9876"
 
 if [[ -f .env ]]; then
     source .env
@@ -33,14 +34,10 @@ fi
 #fi
 
 IFS=","
-DPORTS=""
+DPORTS=()
 for i in $PORTS; do
     if [[ $i != "" ]]; then
-         if [[ $DPORTS == "" ]]; then
-            DPORTS="-p0.0.0.0:$i:$i"
-        else
-            DPORTS="$DPORTS -p0.0.0.0:$i:$i"
-        fi
+            DPORTS+=("-p0.0.0.0:$i:$i")
     fi
 done
 
@@ -68,46 +65,35 @@ help() {
     exit
 }
 
-optimize() {
-    echo    75 | sudo tee /proc/sys/vm/dirty_background_ratio
-    echo  1000 | sudo tee /proc/sys/vm/dirty_expire_centisecs
-    echo    80 | sudo tee /proc/sys/vm/dirty_ratio
-    echo 30000 | sudo tee /proc/sys/vm/dirty_writeback_centisecs
-}
 
-build() {
-    echo $GREEN"Building docker container"$RESET
-    cd $DOCKER_DIR
-    docker build -t eos .
-}
+#build() {
+#    echo $GREEN"Building docker container"$RESET
+#    cd $DOCKER_DIR
+#    docker build -t eos .
+#}
 
-build_full() {
-    echo $GREEN"Building full-node docker container"$RESET
-    cd $FULL_DOCKER_DIR
-    docker build -t eos .
-}
 
-dlblocks() {
-    if [[ ! -d "$DATADIR/blockchain" ]]; then
-        mkdir "$DATADIR/blockchain"
-    fi
-    echo "Removing old block log"
-    sudo rm -f $DATADIR/witness_node_data_dir/blockchain/block_log
-    sudo rm -f $DATADIR/witness_node_data_dir/blockchain/block_log.index
-    echo "Download @gtg's block logs..."
-    if [[ ! $(command -v xz) ]]; then
-        echo "XZ not found. Attempting to install..."
-        sudo apt update
-        sudo apt install -y xz-utils
-    fi
-    wget https://gtg.eos.house/get/blockchain.xz/block_log.xz -O $DATADIR/witness_node_data_dir/blockchain/block_log.xz
-    echo "Decompressing block log... this may take a while..."
-    xz -d $DATADIR/witness_node_data_dir/blockchain/block_log.xz
-    echo "FINISHED. Blockchain downloaded and decompressed"
-    echo "Remember to resize your /dev/shm, and run with replay!"
-    echo "$ ./run.sh shm_size SIZE (e.g. 8G)"
-    echo "$ ./run.sh replay"
-}
+#dlblocks() {
+#    if [[ ! -d "$DATADIR/blockchain" ]]; then
+#        mkdir "$DATADIR/blockchain"
+#    fi
+#    echo "Removing old block log"
+#    sudo rm -f $DATADIR/witness_node_data_dir/blockchain/block_log
+#    sudo rm -f $DATADIR/witness_node_data_dir/blockchain/block_log.index
+#    echo "Download @gtg's block logs..."
+#    if [[ ! $(command -v xz) ]]; then
+#        echo "XZ not found. Attempting to install..."
+#        sudo apt update
+#        sudo apt install -y xz-utils
+#    fi
+#    wget https://gtg.eos.house/get/blockchain.xz/block_log.xz -O $DATADIR/witness_node_data_dir/blockchain/block_log.xz
+#    echo "Decompressing block log... this may take a while..."
+#    xz -d $DATADIR/witness_node_data_dir/blockchain/block_log.xz
+#    echo "FINISHED. Blockchain downloaded and decompressed"
+#    echo "Remember to resize your /dev/shm, and run with replay!"
+#    echo "$ ./run.sh shm_size SIZE (e.g. 8G)"
+#    echo "$ ./run.sh replay"
+#}
 
 install_docker() {
     sudo apt update
@@ -128,13 +114,6 @@ install() {
     echo "Installation completed. You may now configure or run the server"
 }
 
-install_full() {
-    echo "Loading image from someguy123/eos"
-    docker pull someguy123/eos:latest-full
-    echo "Tagging as eos"
-    docker tag someguy123/eos:latest-full eos
-    echo "Installation completed. You may now configure or run the server"
-}
 seed_exists() {
     seedcount=$(docker ps -a -f name="^/"$DOCKER_NAME"$" | wc -l)
     if [[ $seedcount -eq 2 ]]; then
@@ -159,7 +138,7 @@ start() {
     if [[ $? == 0 ]]; then
         docker start $DOCKER_NAME
     else
-        docker run $DPORTS -v /dev/shm:/shm -v "$DATADIR":/eos -d --name $DOCKER_NAME -t eos
+        docker run ${DPORTS[@]} -v /dev/shm:/shm -v "$DATADIR":"$MOUNTDIR" -d --name $DOCKER_NAME -t eos
     fi
 }
 
@@ -167,7 +146,7 @@ replay() {
     echo "Removing old container"
     docker rm $DOCKER_NAME
     echo "Running eos with replay..."
-    docker run $DPORTS -v /dev/shm:/shm -v "$DATADIR":/eos -d --name $DOCKER_NAME -t eos eosd --replay
+    docker run ${DPORTS[@]} -v /dev/shm:/shm -v "$DATADIR":"$MOUNTDIR" -d --name $DOCKER_NAME -t eos eosd --replay
     echo "Started."
 }
 
@@ -187,11 +166,11 @@ enter() {
 }
 
 wallet() {
-    docker exec -it $DOCKER_NAME cli_wallet
+    docker exec -it $DOCKER_NAME eosc wallet $1..$8 
 }
 
 remote_wallet() {
-    docker run -v "$DATADIR":/eos --rm -it eos cli_wallet -s wss://eosd.eosit.com
+    docker run -v "$DATADIR":"$MOUNTDIR" --rm -it eosc -H testnet1.eos.io -p 80 wallet $1..$8
 }
 
 logs() {
@@ -276,10 +255,10 @@ case $1 in
         status
         ;;
     wallet)
-        wallet
+        wallet $2..$9
         ;;
     remote_wallet)
-        remote_wallet
+        remote_wallet $2..$9
         ;;
     dlblocks)
         dlblocks 
