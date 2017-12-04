@@ -166,11 +166,11 @@ enter() {
 }
 
 wallet() {
-    docker exec -it $DOCKER_NAME eosc wallet $1..$8 
+    docker exec -it $DOCKER_NAME eosc wallet "${@}"
 }
 
 remote_wallet() {
-    docker run -v "$DATADIR":"$MOUNTDIR" --rm -it eosc -H testnet1.eos.io -p 80 wallet $1..$8
+    docker run -v "$DATADIR":"$MOUNTDIR" --rm -it eosc -H testnet1.eos.io -p 80 wallet "${@}"
 }
 
 logs() {
@@ -255,10 +255,12 @@ case $1 in
         status
         ;;
     wallet)
-        wallet $2..$9
+        shift
+        wallet "${@}"
         ;;
     remote_wallet)
-        remote_wallet $2..$9
+        shift
+        remote_wallet "${@}"
         ;;
     dlblocks)
         dlblocks 
