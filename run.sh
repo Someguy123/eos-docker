@@ -170,7 +170,7 @@ wallet() {
 }
 
 remote_wallet() {
-    docker run -v "$DATADIR":"$MOUNTDIR" --rm -it $DOCKER_NAME eosc -H testnet1.eos.io -p 80 wallet "${@}"
+    docker run -v "$DATADIR":"$MOUNTDIR" --rm -it $DOCKER_NAME eos eosc -H testnet1.eos.io -p 80 wallet "${@}"
 }
 
 logs() {
