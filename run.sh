@@ -1,12 +1,12 @@
 #!/bin/bash
 #
-# Steem node manager
+# EOS node manager
 # Released under GNU AGPL by Someguy123
 #
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 DOCKER_DIR="$DIR/dkr"
-FULL_DOCKER_DIR="$DIR/dkr_fullnode"
+# FULL_DOCKER_DIR="$DIR/dkr_fullnode"
 DATADIR="$DIR/data"
 DOCKER_NAME="seed"
 
@@ -27,10 +27,10 @@ if [[ -f .env ]]; then
     source .env
 fi
 
-if [[ ! -f data/witness_node_data_dir/config.ini ]]; then
-    echo "config.ini not found. copying example (seed)";
-    cp data/witness_node_data_dir/config.ini.example data/witness_node_data_dir/config.ini
-fi
+#if [[ ! -f data/witness_node_data_dir/config.ini ]]; then
+#    echo "config.ini not found. copying example (seed)";
+#    cp data/witness_node_data_dir/config.ini.example data/witness_node_data_dir/config.ini
+#fi
 
 IFS=","
 DPORTS=""
@@ -48,19 +48,19 @@ help() {
     echo "Usage: $0 COMMAND [DATA]"
     echo
     echo "Commands: "
-    echo "    start - starts steem container"
+    echo "    start - starts eos container"
     echo "    dlblocks - download and decompress the blockchain to speed up your first start"
-    echo "    replay - starts steem container (in replay mode)"
+    echo "    replay - starts eos container (in replay mode)"
     echo "    shm_size - resizes /dev/shm to size given, e.g. ./run.sh shm_size 10G "
-    echo "    stop - stops steem container"
-    echo "    status - show status of steem container"
-    echo "    restart - restarts steem container"
+    echo "    stop - stops eos container"
+    echo "    status - show status of eos container"
+    echo "    restart - restarts eos container"
     echo "    install_docker - install docker"
     echo "    install - pulls latest docker image from server (no compiling)"
     echo "    install_full - pulls latest (FULL NODE FOR RPC) docker image from server (no compiling)"
-    echo "    rebuild - builds steem container (from docker file), and then restarts it"
-    echo "    build - only builds steem container (from docker file)"
-    echo "    logs - show all logs inc. docker logs, and steem logs"
+    echo "    rebuild - builds eos container (from docker file), and then restarts it"
+    echo "    build - only builds eos container (from docker file)"
+    echo "    logs - show all logs inc. docker logs, and eos logs"
     echo "    wallet - open cli_wallet in the container"
     echo "    remote_wallet - open cli_wallet in the container connecting to a remote seed"
     echo "    enter - enter a bash session in the container"
@@ -78,13 +78,13 @@ optimize() {
 build() {
     echo $GREEN"Building docker container"$RESET
     cd $DOCKER_DIR
-    docker build -t steem .
+    docker build -t eos .
 }
 
 build_full() {
     echo $GREEN"Building full-node docker container"$RESET
     cd $FULL_DOCKER_DIR
-    docker build -t steem .
+    docker build -t eos .
 }
 
 dlblocks() {
@@ -100,7 +100,7 @@ dlblocks() {
         sudo apt update
         sudo apt install -y xz-utils
     fi
-    wget https://gtg.steem.house/get/blockchain.xz/block_log.xz -O $DATADIR/witness_node_data_dir/blockchain/block_log.xz
+    wget https://gtg.eos.house/get/blockchain.xz/block_log.xz -O $DATADIR/witness_node_data_dir/blockchain/block_log.xz
     echo "Decompressing block log... this may take a while..."
     xz -d $DATADIR/witness_node_data_dir/blockchain/block_log.xz
     echo "FINISHED. Blockchain downloaded and decompressed"
@@ -121,18 +121,18 @@ install_docker() {
 }
 
 install() {
-    echo "Loading image from someguy123/steem"
-    docker pull someguy123/steem
-    echo "Tagging as steem"
-    docker tag someguy123/steem steem
+    echo "Loading image from someguy123/eos"
+    docker pull someguy123/eos
+    echo "Tagging as eos"
+    docker tag someguy123/eos eos
     echo "Installation completed. You may now configure or run the server"
 }
 
 install_full() {
-    echo "Loading image from someguy123/steem"
-    docker pull someguy123/steem:latest-full
-    echo "Tagging as steem"
-    docker tag someguy123/steem:latest-full steem
+    echo "Loading image from someguy123/eos"
+    docker pull someguy123/eos:latest-full
+    echo "Tagging as eos"
+    docker tag someguy123/eos:latest-full eos
     echo "Installation completed. You may now configure or run the server"
 }
 seed_exists() {
@@ -159,15 +159,15 @@ start() {
     if [[ $? == 0 ]]; then
         docker start $DOCKER_NAME
     else
-        docker run $DPORTS -v /dev/shm:/shm -v "$DATADIR":/steem -d --name $DOCKER_NAME -t steem
+        docker run $DPORTS -v /dev/shm:/shm -v "$DATADIR":/eos -d --name $DOCKER_NAME -t eos
     fi
 }
 
 replay() {
     echo "Removing old container"
     docker rm $DOCKER_NAME
-    echo "Running steem with replay..."
-    docker run $DPORTS -v /dev/shm:/shm -v "$DATADIR":/steem -d --name $DOCKER_NAME -t steem steemd --replay
+    echo "Running eos with replay..."
+    docker run $DPORTS -v /dev/shm:/shm -v "$DATADIR":/eos -d --name $DOCKER_NAME -t eos eosd --replay
     echo "Started."
 }
 
@@ -191,7 +191,7 @@ wallet() {
 }
 
 remote_wallet() {
-    docker run -v "$DATADIR":/steem --rm -it steem cli_wallet -s wss://steemd.steemit.com
+    docker run -v "$DATADIR":/eos --rm -it eos cli_wallet -s wss://eosd.eosit.com
 }
 
 logs() {
