@@ -169,6 +169,10 @@ wallet() {
     docker exec -it $DOCKER_NAME eosc wallet "${@}"
 }
 
+client() {
+    docker exec -it $DOCKER_NAME eosc "${@}"
+}
+
 remote_wallet() {
     docker run -v "$DATADIR":"$MOUNTDIR" --rm -it eos eosc -H testnet1.eos.io -p 80 wallet "${@}"
 }
@@ -261,6 +265,10 @@ case $1 in
     remote_wallet)
         shift
         remote_wallet "${@}"
+        ;;
+    client)
+        shift
+        client "${@}"
         ;;
     dlblocks)
         dlblocks 
